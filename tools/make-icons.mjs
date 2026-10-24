@@ -19,34 +19,46 @@ function chunk(type, data) {
   return Buffer.concat([len, td, c]);
 }
 
-// 0..1 の座標で、マイクの形（白）までの距離
+// 0..1 の座標で、音符（♪）までの距離
 const sdRoundRect = (x, y, cx, cy, hw, hh, r) => {
   const dx = Math.abs(x - cx) - hw + r, dy = Math.abs(y - cy) - hh + r;
   return Math.hypot(Math.max(dx, 0), Math.max(dy, 0)) + Math.min(Math.max(dx, dy), 0) - r;
 };
-function micDist(x, y) {
-  const head = sdRoundRect(x, y, 0.5, 0.40, 0.12, 0.19, 0.12);
-  // U字のスタンド
-  const ring = Math.abs(Math.hypot(x - 0.5, y - 0.44) - 0.21) - 0.028;
-  const ringCut = y < 0.44 ? 1 : ring;
-  const stem = sdRoundRect(x, y, 0.5, 0.715, 0.028, 0.06, 0.02);
-  const base = sdRoundRect(x, y, 0.5, 0.78, 0.12, 0.028, 0.028);
-  return Math.min(head, ringCut, stem, base);
+// 傾けた楕円（符頭）
+function sdEllipse(x, y, cx, cy, rx, ry, deg) {
+  const a = (deg * Math.PI) / 180;
+  const u = (x - cx) * Math.cos(a) + (y - cy) * Math.sin(a);
+  const v = -(x - cx) * Math.sin(a) + (y - cy) * Math.cos(a);
+  return (Math.hypot(u / rx, v / ry) - 1) * Math.min(rx, ry);
+}
+// 旗：3次ベジェ曲線に沿って、先へ行くほど細くなる帯
+const FLAG = [[0.538, 0.235], [0.555, 0.36], [0.705, 0.38], [0.665, 0.57]];
+const flagPts = Array.from({ length: 80 }, (_, i) => {
+  const t = i / 79, m = 1 - t;
+  const b = [m * m * m, 3 * m * m * t, 3 * m * t * t, t * t * t];
+  return [b.reduce((s, w, k) => s + w * FLAG[k][0], 0), b.reduce((s, w, k) => s + w * FLAG[k][1], 0), 0.024 - 0.008 * t];
+});
+function sdFlag(x, y) {
+  let d = Infinity;
+  for (const [px, py, r] of flagPts) d = Math.min(d, Math.hypot(x - px, y - py) - r);
+  return d;
+}
+function noteDist(x, y) {
+  const head = sdEllipse(x, y, 0.43, 0.69, 0.118, 0.085, -25);
+  const stem = sdRoundRect(x, y, 0.525, 0.455, 0.022, 0.235, 0.01);
+  return Math.min(head, stem, sdFlag(x, y));
 }
 
 function png(size) {
   const raw = Buffer.alloc((size * 4 + 1) * size);
-  const c1 = [232, 70, 93], c2 = [255, 154, 98];
+  const bg = [0, 0, 0], fg = [48, 209, 88];
   for (let py = 0; py < size; py++) {
     raw[py * (size * 4 + 1)] = 0;
     for (let px = 0; px < size; px++) {
       const x = (px + 0.5) / size, y = (py + 0.5) / size;
-      const t = Math.min(1, Math.max(0, (x + y) / 2));
-      let col = c1.map((v, i) => v + (c2[i] - v) * t);
       const aa = 1.2 / size;
-      const d = micDist(x, y);
-      const w = Math.min(1, Math.max(0, 0.5 - d / aa));
-      col = col.map((v) => v + (255 - v) * w);
+      const w = Math.min(1, Math.max(0, 0.5 - noteDist(x, y) / aa));
+      const col = bg.map((v, i) => v + (fg[i] - v) * w);
       const o = py * (size * 4 + 1) + 1 + px * 4;
       raw[o] = col[0]; raw[o + 1] = col[1]; raw[o + 2] = col[2]; raw[o + 3] = 255;
     }
