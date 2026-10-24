@@ -25,7 +25,7 @@ ES モジュールと Service Worker を使うため、`index.html` をファイ
    - Android：Chrome のメニュー →「アプリをインストール」
 3. 一度開けばオフラインでも動く
 
-データは端末のブラウザ内（localStorage）に保存する。iPhone では長期間開かないと消えることがあるので、設定の「書き出し」で定期的にバックアップする。
+データは端末のブラウザ内に保存する（画像は IndexedDB、それ以外は localStorage）。iPhone では長期間開かないと消えることがあるので、設定の「書き出し」で定期的にバックアップする。
 
 ## 構成
 
@@ -33,6 +33,7 @@ ES モジュールと Service Worker を使うため、`index.html` をファイ
 | --- | --- |
 | `js/store.js` | データと処理（重複判定・削除の連鎖・並べ替え・バックアップ）。DOM に依存しない |
 | `js/app.js` | タブ切り替えと再描画 |
+| `js/images.js` | 画像の保存（IndexedDB）と、選んだ写真の切り抜き・縮小 |
 | `js/views/` | 4つのメイン画面 |
 | `js/detail.js` | 楽曲詳細・点数記録の入力 |
 | `js/pickers.js` / `js/filters.js` | 選択・絞り込みのシート |

@@ -308,3 +308,18 @@ textarea.input { resize: vertical; min-height: 80px; }
   transition: opacity .2s, transform .2s; max-width: calc(100% - 32px); text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---- ジャケット・写真 ---- */
+.art { display: flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+.art img { width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none; }
+.song-art:has(img), .list-icon:has(img), .detail-art:has(img) { background: var(--fill); }
+.detail-art { width: 72px; height: 72px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #ff9a62); color: #fff; }
+.jacket-field { display: flex; align-items: center; gap: 14px; }
+.jacket-btn { flex: none; }
+.jacket { width: 88px; height: 88px; border-radius: 12px; background: var(--fill); color: var(--muted); border: 1.5px dashed var(--line); }
+.jacket:has(img) { border: 0; }
+.jacket-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.danger-text { color: var(--danger); }
+.cover-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0 auto 14px; }
+.cover { width: 180px; height: 180px; border-radius: 14px; background: var(--fill); color: var(--muted); box-shadow: 0 6px 20px rgba(0, 0, 0, .12); }
+.cover-hint { color: var(--accent); font-size: 14px; font-weight: 600; }

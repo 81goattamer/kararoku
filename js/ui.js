@@ -53,6 +53,7 @@ const ICONS = {
   upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
   user: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
   layers: 'M12 2L2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  image: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21',
 };
 
 export function icon(name, { fill = false, size = 22 } = {}) {
@@ -257,6 +258,12 @@ export function formatDatetime(s) {
 
 export function formatDate(s) {
   return s ? s.slice(0, 10).replaceAll('-', '/') : '';
+}
+
+// ジャケット・写真。画像がなければアイコンを表示する
+export function artwork(data, iconName = 'music', cls = '', size = 20) {
+  return h('div', { class: `art ${cls}` },
+    data ? h('img', { src: data, alt: '', draggable: 'false' }) : icon(iconName, { size }));
 }
 
 export function empty(text, iconName = 'music') {

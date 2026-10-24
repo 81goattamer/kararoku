@@ -2,7 +2,7 @@ import { store, nameById } from './app-store.js';
 import { recordsOf, lastSung, bestScores, nowDatetime, isValidScore } from './store.js';
 import { t } from './i18n.js';
 import {
-  h, icon, iconButton, openSheet, confirmDialog, actionMenu, promptSheet, toast,
+  h, icon, iconButton, openSheet, confirmDialog, actionMenu, promptSheet, toast, artwork,
   formatScore, formatKey, formatDatetime, formatDate,
 } from './ui.js';
 import { pickMylist } from './pickers.js';
@@ -36,6 +36,7 @@ export function songDetail(songId, { listId = null } = {}) {
 
   return h('div', { class: 'detail' },
     h('div', { class: 'detail-head' },
+      artwork(store.imageOf(song), 'music', 'detail-art', 32),
       h('div', { class: 'grow' },
         h('div', { class: 'detail-title' }, song.title),
         h('div', { class: 'detail-artist' }, nameById('artists', song.artistId))),

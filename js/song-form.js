@@ -1,15 +1,24 @@
 import { store, nameById } from './app-store.js';
 import { KEY_MIN, KEY_MAX } from './store.js';
 import { t } from './i18n.js';
-import { h, icon, formatKey } from './ui.js';
+import { h, icon, formatKey, artwork, toast } from './ui.js';
 import { pickNamed } from './pickers.js';
+import { pickImage } from './images.js';
 
 export function emptyDraft() {
-  return { title: '', artistId: null, levelId: null, tagIds: [], memo: '', key: 0 };
+  return { title: '', artistId: null, levelId: null, tagIds: [], memo: '', key: 0, image: null };
 }
 
 export function draftFromSong(song) {
-  return { title: song.title, artistId: song.artistId, levelId: song.levelId, tagIds: [...song.tagIds], memo: song.memo, key: song.key };
+  return {
+    title: song.title,
+    artistId: song.artistId,
+    levelId: song.levelId,
+    tagIds: [...song.tagIds],
+    memo: song.memo,
+    key: song.key,
+    image: store.imageOf(song),
+  };
 }
 
 // 削除されたアーティストなどへの参照を外す
@@ -56,7 +65,14 @@ export function songForm({ draft, submitLabel, onSubmit }) {
       draft.key = Math.min(KEY_MAX, Math.max(KEY_MIN, draft.key + d));
       render();
     };
+    const choose = () => pickImage((data) => { draft.image = data; render(); }, () => toast(t('image.error')));
     root.replaceChildren(...[
+      field('image', t('field.jacket'), h('div', { class: 'jacket-field' },
+        h('button', { type: 'button', class: 'jacket-btn', onClick: choose, 'aria-label': draft.image ? t('image.change') : t('image.choose') },
+          artwork(draft.image, 'image', 'jacket', 28)),
+        h('div', { class: 'jacket-actions' },
+          h('button', { type: 'button', class: 'text-btn', onClick: choose }, draft.image ? t('image.change') : t('image.choose')),
+          draft.image ? h('button', { type: 'button', class: 'text-btn danger-text', onClick: () => { draft.image = null; render(); } }, t('image.remove')) : null))),
       field('music', t('field.title'), title, true),
       field('mic', t('field.artist'), pickerButton(nameById('artists', draft.artistId), t('register.chooseArtist'), () => pickNamed({
         kind: 'artists',

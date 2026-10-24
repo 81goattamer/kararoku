@@ -1,7 +1,8 @@
 import { store, nameById } from '../app-store.js';
 import { filterSongs, sortSongs, shuffle } from '../store.js';
 import { t, getLang } from '../i18n.js';
-import { h, icon, iconButton, openSheet, confirmDialog, actionMenu, promptSheet, toast, empty } from '../ui.js';
+import { h, icon, iconButton, openSheet, confirmDialog, actionMenu, promptSheet, toast, empty, artwork } from '../ui.js';
+import { pickImage } from '../images.js';
 import { emptyFilter, cleanFilter, filterBar, tagChecks, tagModeSwitch, levelChecks } from '../filters.js';
 import { openSongMenu } from '../detail.js';
 import { songRow, showDetail, inlineDetail } from './songs.js';
@@ -45,15 +46,22 @@ function renderIndex(root) {
         class: 'list-row',
         onClick: () => { Object.assign(view, { openId: m.id, editing: false, shuffle: null, expanded: null }); rerender(); window.scrollTo(0, 0); },
       },
-      h('span', { class: 'list-icon' }, icon('list', { size: 20 })),
+      artwork(store.imageOf(m), 'list', 'list-icon'),
       h('span', { class: 'grow' }, m.name),
       h('span', { class: 'muted' }, m.songIds.length),
       icon('chevron', { size: 18 }))))
       : empty(t('mylists.empty'), 'list'));
 }
 
+function choosePhoto(list) {
+  pickImage((data) => store.setMylistImage(list.id, data), () => toast(t('image.error')));
+}
+
 function listMenu(list) {
+  const hasPhoto = !!list.imageId;
   actionMenu(list.name, [
+    { icon: 'image', label: hasPhoto ? t('mylists.photo') : t('mylists.addPhoto'), onClick: () => choosePhoto(list) },
+    hasPhoto && { icon: 'minus', label: t('mylists.removePhoto'), onClick: () => store.setMylistImage(list.id, null) },
     {
       icon: 'edit',
       label: t('mylists.rename'),
@@ -107,6 +115,13 @@ function renderList(root, list) {
 
   root.replaceChildren(
     listHead(list.name, () => { view.openId = null; rerender(); }, iconButton('more', t('common.edit'), () => listMenu(list))),
+    h('button', {
+      type: 'button',
+      class: 'cover-btn',
+      onClick: () => choosePhoto(list),
+      'aria-label': list.imageId ? t('mylists.photo') : t('mylists.addPhoto'),
+    }, artwork(store.imageOf(list), 'image', 'cover', 36),
+    list.imageId ? null : h('span', { class: 'cover-hint' }, t('mylists.addPhoto'))),
     h('div', { class: 'list-tools' },
       h('button', { type: 'button', class: 'btn primary round', disabled: !songs.length, onClick: () => openShuffleSetup(list) },
         icon('shuffle', { size: 18 }), t('mylists.shuffle')),

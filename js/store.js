@@ -90,12 +90,14 @@ export function toMinute(s) {
 }
 
 // 読み込んだデータの形を整え、壊れた参照を取り除く
-export function sanitize(raw, lang = 'ja') {
+// hasImage は画像の保存先にその id があるかを返す。ない画像への参照は外す
+export function sanitize(raw, lang = 'ja', hasImage = () => false) {
   if (!raw || typeof raw !== 'object') throw new Error('invalid');
   const arr = (v) => (Array.isArray(v) ? v : []);
   const str = (v) => (typeof v === 'string' ? v : '');
   const seen = new Set();
   const idOk = (v) => typeof v === 'string' && v !== '' && !seen.has(v) && seen.add(v);
+  const img = (v) => (typeof v === 'string' && hasImage(v) ? v : null);
 
   const s = { songs: [], records: [], artists: [], levels: [], tags: [], devices: [], mylists: [] };
 
@@ -136,6 +138,7 @@ export function sanitize(raw, lang = 'ja') {
       tagIds: [...new Set(arr(so.tagIds).filter((t) => has('tags', t)))],
       memo: str(so.memo),
       key,
+      imageId: img(so.imageId),
     });
   }
   for (const r of arr(raw.records)) {
@@ -150,6 +153,7 @@ export function sanitize(raw, lang = 'ja') {
       id: m.id,
       name: str(m.name).trim(),
       songIds: [...new Set(arr(m.songIds).filter((id) => has('songs', id)))],
+      imageId: img(m.imageId),
     });
   }
 
@@ -283,20 +287,40 @@ export function shuffle(items, rand = Math.random) {
   return a;
 }
 
+// 画像は data URL（JPEG など）で持つ。大きすぎるものは受け付けない
+export function isImageData(v) {
+  return typeof v === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,/.test(v) && v.length < 5_000_000;
+}
+
+// 画像の保存先。ブラウザでは IndexedDB を使う実装を渡す（images.js）
+export function memoryImages() {
+  const m = new Map();
+  return {
+    has: (id) => m.has(id),
+    get: (id) => m.get(id) ?? null,
+    set: (id, data) => { m.set(id, data); },
+    delete: (id) => { m.delete(id); },
+    keys: () => [...m.keys()],
+    clear: () => { m.clear(); },
+  };
+}
+
 // ---- 更新系 ----
 
 export class Store {
-  constructor({ storage = null, lang = 'ja' } = {}) {
+  constructor({ storage = null, lang = 'ja', images = memoryImages() } = {}) {
     this.storage = storage;
     this.lang = lang;
+    this.images = images;
     this.listeners = new Set();
     this.state = this.load();
+    this.dropUnusedImages();
   }
 
   load() {
     try {
       const raw = this.storage?.getItem(STORAGE_KEY);
-      if (raw) return sanitize(JSON.parse(raw).data, this.lang);
+      if (raw) return sanitize(JSON.parse(raw).data, this.lang, (id) => this.images.has(id));
     } catch {
       // 壊れていたら初期状態で始める
     }
@@ -315,6 +339,37 @@ export class Store {
 
   get(kind, id) {
     return this.state[kind].find((x) => x.id === id) ?? null;
+  }
+
+  // ---- 画像 ----
+
+  imageOf(item) {
+    return item?.imageId ? this.images.get(item.imageId) : null;
+  }
+
+  // data が null なら画像を外す。同じ画像なら何もしない
+  replaceImage(item, data) {
+    if (data != null && !isImageData(data)) return;
+    if (data != null && data === this.imageOf(item)) return;
+    if (item.imageId) this.images.delete(item.imageId);
+    item.imageId = null;
+    if (data != null) {
+      item.imageId = uid();
+      this.images.set(item.imageId, data);
+    }
+  }
+
+  setMylistImage(listId, data) {
+    const list = this.get('mylists', listId);
+    if (!list) return;
+    this.replaceImage(list, data);
+    this.save();
+  }
+
+  // どこからも参照されていない画像を消す（保存の途中で中断した場合など）
+  dropUnusedImages() {
+    const used = new Set([...this.state.songs, ...this.state.mylists].map((x) => x.imageId).filter(Boolean));
+    for (const id of this.images.keys()) if (!used.has(id)) this.images.delete(id);
   }
 
   // ---- 楽曲 ----
@@ -342,7 +397,8 @@ export class Store {
   addSong(f) {
     const v = this.validateSong(f);
     if (!v.ok) return v;
-    const song = { id: uid(), ...this.songFields(f) };
+    const song = { id: uid(), ...this.songFields(f), imageId: null };
+    if (f.image) this.replaceImage(song, f.image);
     this.state.songs.push(song);
     this.save();
     return { ok: true, id: song.id };
@@ -354,6 +410,7 @@ export class Store {
     const v = this.validateSong(f, id);
     if (!v.ok) return v;
     Object.assign(song, this.songFields(f));
+    if ('image' in f) this.replaceImage(song, f.image);
     this.save();
     return { ok: true, id };
   }
@@ -361,6 +418,7 @@ export class Store {
   removeSongs(ids) {
     const set = new Set(ids);
     if (!set.size) return;
+    for (const s of this.state.songs) if (set.has(s.id) && s.imageId) this.images.delete(s.imageId);
     this.state.songs = this.state.songs.filter((s) => !set.has(s.id));
     this.state.records = this.state.records.filter((r) => !set.has(r.songId));
     for (const m of this.state.mylists) m.songIds = m.songIds.filter((id) => !set.has(id));
@@ -417,7 +475,7 @@ export class Store {
     const item = { id: uid(), name };
     if (kind === 'artists') Object.assign(item, { aliases: cleanAliases(fields.aliases), favorite: !!fields.favorite });
     if (kind === 'levels') item.key = null;
-    if (kind === 'mylists') item.songIds = [];
+    if (kind === 'mylists') Object.assign(item, { songIds: [], imageId: null });
     this.state[kind].push(item);
     this.save();
     return { ok: true, id: item.id };
@@ -454,6 +512,9 @@ export class Store {
       if (s.settings.lastDeviceId === id) s.settings.lastDeviceId = null;
     } else if (kind === 'tags') {
       for (const so of s.songs) so.tagIds = so.tagIds.filter((t) => t !== id);
+    } else if (kind === 'mylists') {
+      const list = this.get('mylists', id);
+      if (list?.imageId) this.images.delete(list.imageId);
     }
     s[kind] = s[kind].filter((x) => x.id !== id);
     this.save();
@@ -508,23 +569,43 @@ export class Store {
   // ---- バックアップ ----
 
   exportData() {
-    return { app: 'kararoku', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: structuredClone(this.state) };
+    const images = {};
+    for (const x of [...this.state.songs, ...this.state.mylists]) {
+      const data = this.imageOf(x);
+      if (data) images[x.imageId] = data;
+    }
+    return { app: 'kararoku', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: structuredClone(this.state), images };
   }
 
-  // 失敗したら例外を投げ、データは何も変えない
+  // 失敗したら例外を投げ、データは何も変えない。画像は images に入れて返す
   parseBackup(text) {
     const obj = JSON.parse(text);
     if (obj?.app !== 'kararoku' || typeof obj.version !== 'number' || obj.version > SCHEMA_VERSION) throw new Error('format');
-    return sanitize(obj.data, this.lang);
+    const images = {};
+    if (obj.images && typeof obj.images === 'object') {
+      for (const [id, data] of Object.entries(obj.images)) if (isImageData(data)) images[id] = data;
+    }
+    const data = sanitize(obj.data, this.lang, (id) => Object.hasOwn(images, id));
+    return { ...data, images };
   }
 
-  importOverwrite(data) {
+  importOverwrite({ images = {}, ...data }) {
+    this.images.clear();
     this.state = structuredClone(data);
+    for (const x of [...this.state.songs, ...this.state.mylists]) {
+      if (x.imageId) this.images.set(x.imageId, images[x.imageId]);
+    }
     this.save();
   }
 
   importMerge(incoming) {
     const s = this.state;
+    const images = incoming.images ?? {};
+    const copyImage = (item) => {
+      const data = item.imageId ? images[item.imageId] : null;
+      item.imageId = null;
+      if (data) this.replaceImage(item, data);
+    };
     const maps = {};
     for (const kind of ['artists', 'levels', 'tags', 'devices']) {
       maps[kind] = new Map();
@@ -553,6 +634,7 @@ export class Store {
         levelId: so.levelId ? maps.levels.get(so.levelId) : null,
         tagIds: so.tagIds.map((t) => maps.tags.get(t)),
       };
+      copyImage(copy);
       s.songs.push(copy);
       songMap.set(so.id, copy.id);
     }
@@ -570,7 +652,9 @@ export class Store {
       if (ex) {
         for (const id of ids) if (!ex.songIds.includes(id)) ex.songIds.push(id);
       } else {
-        s.mylists.push({ id: uid(), name: m.name, songIds: [...new Set(ids)] });
+        const list = { id: uid(), name: m.name, songIds: [...new Set(ids)], imageId: m.imageId };
+        copyImage(list);
+        s.mylists.push(list);
       }
     }
     this.save();

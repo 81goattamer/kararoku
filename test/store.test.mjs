@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  Store, normalize, sortSongs, filterSongs, NO_LEVEL, lastSung, bestScore, levelName, recordsOf,
+  Store, normalize, sortSongs, filterSongs, NO_LEVEL, lastSung, bestScore, levelName, recordsOf, memoryImages,
 } from '../js/store.js';
 
 class MemStorage {
@@ -179,4 +179,75 @@ test('broken backup throws and leaves data unchanged', () => {
   assert.throws(() => st.parseBackup('{'));
   assert.throws(() => st.parseBackup('{"app":"other"}'));
   assert.equal(JSON.stringify(st.state), before);
+});
+
+const IMG_A = 'data:image/jpeg;base64,AAAA';
+const IMG_B = 'data:image/jpeg;base64,BBBB';
+
+test('song and mylist images: set, replace, remove, delete with owner', () => {
+  const { st, a } = setup();
+  const s = st.addSong({ title: 'x', artistId: a, image: IMG_A }).id;
+  const song = st.get('songs', s);
+  assert.equal(st.imageOf(song), IMG_A);
+  const first = song.imageId;
+  st.updateSong(s, { title: 'x', artistId: a, image: IMG_B });
+  assert.equal(st.imageOf(song), IMG_B);
+  assert.equal(st.images.has(first), false);
+  st.updateSong(s, { title: 'x', artistId: a, image: null });
+  assert.equal(song.imageId, null);
+  assert.deepEqual(st.images.keys(), []);
+  st.updateSong(s, { title: 'x', artistId: a, image: 'javascript:alert(1)' });
+  assert.equal(song.imageId, null);
+
+  const m = st.addNamed('mylists', { name: 'L' }).id;
+  st.setMylistImage(m, IMG_A);
+  st.updateSong(s, { title: 'x', artistId: a, image: IMG_B });
+  assert.equal(st.images.keys().length, 2);
+  st.deleteNamed('mylists', m);
+  st.deleteSong(s);
+  assert.deepEqual(st.images.keys(), []);
+});
+
+test('images survive reload and unused ones are dropped', () => {
+  const storage = new MemStorage();
+  const images = memoryImages();
+  const st = new Store({ storage, images });
+  const a = st.addNamed('artists', { name: 'A' }).id;
+  st.addSong({ title: 'x', artistId: a, image: IMG_A });
+  images.set('orphan', IMG_B);
+  const again = new Store({ storage, images });
+  assert.equal(again.imageOf(again.state.songs[0]), IMG_A);
+  assert.equal(images.has('orphan'), false);
+  // 画像が消えていたら参照を外す
+  images.clear();
+  assert.equal(new Store({ storage, images }).state.songs[0].imageId, null);
+});
+
+test('backup carries images for overwrite and merge', () => {
+  const { st, a } = setup();
+  st.addSong({ title: 'x', artistId: a, image: IMG_A });
+  const m = st.addNamed('mylists', { name: 'L' }).id;
+  st.setMylistImage(m, IMG_B);
+  const text = JSON.stringify(st.exportData());
+
+  const o = new Store({ storage: new MemStorage() });
+  o.importOverwrite(o.parseBackup(text));
+  assert.equal(o.imageOf(o.state.songs[0]), IMG_A);
+  assert.equal(o.imageOf(o.state.mylists[0]), IMG_B);
+
+  // 統合：既存の曲・リストの画像はそのまま、新しいものは画像ごと追加
+  const b = new Store({ storage: new MemStorage() });
+  const ba = b.addNamed('artists', { name: 'YOASOBI' }).id;
+  b.addSong({ title: 'x', artistId: ba, image: IMG_B });
+  b.importMerge(b.parseBackup(text));
+  assert.equal(b.imageOf(b.state.songs[0]), IMG_B);
+  assert.equal(b.imageOf(b.state.mylists[0]), IMG_B);
+  assert.equal(b.images.keys().length, 2);
+
+  // 不正な画像データは読み込まない
+  const bad = JSON.parse(text);
+  for (const k of Object.keys(bad.images)) bad.images[k] = 'data:text/html;base64,PHNjcmlwdD4=';
+  const c = new Store({ storage: new MemStorage() });
+  c.importOverwrite(c.parseBackup(JSON.stringify(bad)));
+  assert.equal(c.state.songs[0].imageId, null);
 });

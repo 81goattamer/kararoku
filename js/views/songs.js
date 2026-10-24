@@ -1,7 +1,7 @@
 import { store, nameById } from '../app-store.js';
 import { filterSongs, sortSongs, bestScore, DEFAULT_DIR } from '../store.js';
 import { t, getLang } from '../i18n.js';
-import { h, icon, iconButton, onLongPress, empty, formatScore } from '../ui.js';
+import { h, iconButton, onLongPress, empty, formatScore, artwork } from '../ui.js';
 import { emptyFilter, cleanFilter, filterBar } from '../filters.js';
 import { songDetail, openSongDetail, openSongMenu } from '../detail.js';
 
@@ -13,7 +13,7 @@ export function songRow(song, { onTap, onMenu, extra = null, cls = '' }) {
   const base = s.settings.baseDeviceId;
   const best = base ? bestScore(s, song.id, base) : null;
   const main = h('button', { type: 'button', class: 'song-main', onClick: onTap },
-    h('div', { class: 'song-art' }, icon('music', { size: 20 })),
+    artwork(store.imageOf(song), 'music', 'song-art'),
     h('div', { class: 'song-text' },
       h('div', { class: 'song-title' }, song.title),
       h('div', { class: 'song-sub' },

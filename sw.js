@@ -1,5 +1,5 @@
 // オフラインで動くよう、アプリ本体をキャッシュする。ファイルを変えたら VERSION を上げる
-const VERSION = 'kararoku-v3';
+const VERSION = 'kararoku-v4';
 const FILES = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const FILES = [
   './icons/icon-512.png',
   './js/app.js',
   './js/app-store.js',
+  './js/images.js',
   './js/store.js',
   './js/i18n.js',
   './js/ui.js',

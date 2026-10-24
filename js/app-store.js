@@ -1,5 +1,6 @@
 import { Store, itemName } from './store.js';
 import { detectLang, getLang } from './i18n.js';
+import { loadImageRepo } from './images.js';
 
 function safeStorage() {
   try {
@@ -11,7 +12,7 @@ function safeStorage() {
   }
 }
 
-export const store = new Store({ storage: safeStorage(), lang: detectLang() });
+export const store = new Store({ storage: safeStorage(), lang: detectLang(), images: await loadImageRepo() });
 
 export function nameOf(kind, item) {
   return item ? itemName(kind, item, getLang()) : '';
