@@ -1,5 +1,5 @@
 // オフラインで動くよう、アプリ本体をキャッシュする。ファイルを変えたら VERSION を上げる
-const VERSION = 'kararoku-v5';
+const VERSION = 'kararoku-v6';
 const FILES = [
   './',
   './index.html',

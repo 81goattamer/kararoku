@@ -1,12 +1,17 @@
 import { store, nameById } from './app-store.js';
 import { KEY_MIN, KEY_MAX } from './store.js';
 import { t } from './i18n.js';
-import { h, icon, formatKey, artwork, toast } from './ui.js';
+import { h, icon, formatKey, artwork, toast, promptSheet } from './ui.js';
 import { pickNamed } from './pickers.js';
 import { pickImage } from './images.js';
 
 export function emptyDraft() {
   return { title: '', artistId: null, levelId: null, tagIds: [], memo: '', key: 0, image: null };
+}
+
+// 新規登録用。初回の点数（任意）と機器も入力できる
+export function emptyRegisterDraft() {
+  return { ...emptyDraft(), score: '', deviceId: null };
 }
 
 export function draftFromSong(song) {
@@ -26,6 +31,54 @@ function cleanDraft(d) {
   if (d.artistId && !store.get('artists', d.artistId)) d.artistId = null;
   if (d.levelId && !store.get('levels', d.levelId)) d.levelId = null;
   d.tagIds = d.tagIds.filter((id) => store.get('tags', id));
+  if ('deviceId' in d) {
+    const devices = store.state.devices;
+    if (!devices.some((x) => x.id === d.deviceId)) {
+      const last = store.state.settings.lastDeviceId;
+      d.deviceId = devices.some((x) => x.id === last) ? last : devices[0]?.id ?? null;
+    }
+  }
+}
+
+// 初回の点数と機器。機器がなければ登録ボタンを出す
+function firstScoreField(draft, render) {
+  const devices = store.state.devices;
+  const score = h('input', {
+    class: 'input score-input',
+    type: 'number',
+    inputmode: 'decimal',
+    min: 0,
+    max: 100,
+    step: 'any',
+    value: draft.score,
+    placeholder: `0–100（${t('common.optional')}）`,
+    onInput: (e) => { draft.score = e.target.value; },
+  });
+  let device;
+  if (devices.length) {
+    device = h('select', { class: 'input', onChange: (e) => { draft.deviceId = e.target.value; } },
+      devices.map((d) => h('option', { value: d.id }, d.name)));
+    device.value = draft.deviceId;
+  } else {
+    device = h('button', {
+      type: 'button',
+      class: 'picker-btn placeholder',
+      onClick: () => promptSheet({
+        title: t('record.addDevice'),
+        onSubmit: (name) => {
+          const r = store.addNamed('devices', { name });
+          if (!r.ok) return r.error === 'duplicate' ? t('common.exists') : t('common.required');
+          draft.deviceId = r.id;
+          render();
+          return null;
+        },
+      }),
+    }, h('span', { class: 'grow' }, t('record.addDevice')), icon('plus', { size: 18 }));
+  }
+  return [
+    field('chart', t('register.firstScore'), score),
+    field('device', t('field.device'), device),
+  ];
 }
 
 function field(iconName, label, control, required = false) {
@@ -97,6 +150,7 @@ export function songForm({ draft, submitLabel, onSubmit }) {
         h('span', { class: 'step-value' }, formatKey(draft.key)),
         h('button', { type: 'button', class: 'step-btn', disabled: draft.key >= KEY_MAX, onClick: () => stepKey(1), 'aria-label': '+1' }, icon('plus', { size: 18 })),
         draft.key !== 0 ? h('button', { type: 'button', class: 'text-btn', onClick: () => { draft.key = 0; render(); } }, '0') : null)),
+      ...('score' in draft ? firstScoreField(draft, render) : []),
       error ? h('p', { class: 'error' }, error) : null,
       h('button', {
         type: 'button',

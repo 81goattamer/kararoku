@@ -1,9 +1,11 @@
 import { store, nameById } from '../app-store.js';
 import { filterSongs, sortSongs, bestScore, DEFAULT_DIR } from '../store.js';
 import { t, getLang } from '../i18n.js';
-import { h, iconButton, onLongPress, empty, formatScore, artwork } from '../ui.js';
+import { h, icon, iconButton, onLongPress, empty, formatScore, artwork, actionMenu } from '../ui.js';
 import { emptyFilter, cleanFilter, filterBar } from '../filters.js';
-import { songDetail, openSongDetail, openSongMenu } from '../detail.js';
+import { songDetail, openSongDetail, openRecordForm, confirmDeleteSong } from '../detail.js';
+import { pickMylist } from '../pickers.js';
+import { openRegisterSheet } from './register.js';
 
 const view = { f: emptyFilter(), sort: 'title', dir: 'asc', expanded: null };
 
@@ -24,7 +26,7 @@ export function songRow(song, { onTap, onMenu, extra = null, cls = '' }) {
   return h('div', { class: `song-row ${cls}`, 'data-id': song.id },
     extra,
     main,
-    onMenu ? iconButton('more', t('menu.addToMylist'), onMenu, 'row-more') : null);
+    onMenu ? iconButton('more', t('common.more'), onMenu, 'row-more') : null);
 }
 
 // 詳細の表示方法（設定）に合わせて開く。インラインのときは expanded を切り替えて再描画する
@@ -42,6 +44,15 @@ export function inlineDetail(state, songId, opts = {}) {
     : null;
 }
 
+// 楽曲一覧の…メニュー
+function songsMenu(song, rerender) {
+  actionMenu(song.title, [
+    { icon: 'list', label: t('menu.addToMylist'), onClick: () => pickMylist(song.id) },
+    { icon: 'eye', label: t('common.details'), onClick: () => showDetail(song.id, view, rerender) },
+    { icon: 'trash', label: t('menu.delete'), danger: true, onClick: () => confirmDeleteSong(song.id) },
+  ]);
+}
+
 export function renderSongs(root) {
   const s = store.state;
   cleanFilter(view.f);
@@ -51,7 +62,7 @@ export function renderSongs(root) {
     view.dir = DEFAULT_DIR.title;
   }
 
-  const listBox = h('div', { class: 'song-list' });
+  const listBox = h('div', { class: 'song-list fab-space' });
   const countEl = h('div', { class: 'count' });
   const fillList = () => {
     const rows = sortSongs(s, filterSongs(s, s.songs, view.f), view.sort, view.dir, getLang());
@@ -59,8 +70,8 @@ export function renderSongs(root) {
     listBox.replaceChildren(...(rows.length
       ? rows.flatMap((song) => [
         songRow(song, {
-          onTap: () => showDetail(song.id, view, () => renderSongs(root)),
-          onMenu: () => openSongMenu(song.id),
+          onTap: () => openRecordForm({ songId: song.id }),
+          onMenu: () => songsMenu(song, () => renderSongs(root)),
         }),
         inlineDetail(view, song.id),
       ].filter(Boolean))
@@ -87,6 +98,8 @@ export function renderSongs(root) {
       filterBar(view.f, { onSearch: fillList, onChange: () => renderSongs(root) }),
       sortBar),
     countEl,
-    listBox);
+    listBox,
+    h('button', { type: 'button', class: 'fab', 'aria-label': t('register.title'), title: t('register.title'), onClick: openRegisterSheet },
+      icon('plus', { size: 28 })));
   fillList();
 }

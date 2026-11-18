@@ -1,13 +1,11 @@
 import { store } from './app-store.js';
 import { setLang, t } from './i18n.js';
 import { h, icon, refreshSheets, closeAllSheets } from './ui.js';
-import { renderRegister } from './views/register.js';
 import { renderMylists } from './views/mylists.js';
 import { renderSongs } from './views/songs.js';
 import { renderSettings } from './views/settings.js';
 
 const TABS = [
-  { id: 'register', icon: 'plus', render: renderRegister },
   { id: 'mylists', icon: 'list', render: renderMylists },
   { id: 'songs', icon: 'music', render: renderSongs },
   { id: 'settings', icon: 'gear', render: renderSettings },

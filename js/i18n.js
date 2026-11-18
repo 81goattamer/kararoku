@@ -1,6 +1,5 @@
 const dict = {
   ja: {
-    'tab.register': '登録',
     'tab.mylists': 'マイリスト',
     'tab.songs': '楽曲',
     'tab.settings': '設定',
@@ -39,6 +38,8 @@ const dict = {
     'common.none': 'なし',
     'common.unset': '未設定',
     'common.details': '詳細',
+    'common.optional': '任意',
+    'common.more': 'その他',
     'common.ok': 'OK',
     'common.back': '戻る',
     'common.new': '新規登録',
@@ -48,6 +49,7 @@ const dict = {
 
     'register.title': '楽曲登録',
     'register.saved': '登録しました',
+    'register.firstScore': '初回の点数',
     'register.duplicate': 'すでにあります（同じ曲名・アーティスト）',
     'register.chooseArtist': 'アーティストを選択',
     'register.memoPlaceholder': '歌うときのメモ',
@@ -148,7 +150,6 @@ const dict = {
     'backup.error': 'ファイルを読み込めませんでした。データは変更していません。',
   },
   en: {
-    'tab.register': 'Add',
     'tab.mylists': 'My Lists',
     'tab.songs': 'Songs',
     'tab.settings': 'Settings',
@@ -187,6 +188,8 @@ const dict = {
     'common.none': 'None',
     'common.unset': 'Not set',
     'common.details': 'Details',
+    'common.optional': 'optional',
+    'common.more': 'More',
     'common.ok': 'OK',
     'common.back': 'Back',
     'common.new': 'New',
@@ -196,6 +199,7 @@ const dict = {
 
     'register.title': 'Add Song',
     'register.saved': 'Added',
+    'register.firstScore': 'First score',
     'register.duplicate': 'Already exists (same title and artist)',
     'register.chooseArtist': 'Choose artist',
     'register.memoPlaceholder': 'Notes for singing',

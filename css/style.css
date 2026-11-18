@@ -327,3 +327,12 @@ textarea.input { resize: vertical; min-height: 80px; }
 .cover-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0 auto 14px; }
 .cover { width: 180px; height: 180px; border-radius: 14px; background: var(--fill); color: var(--muted); box-shadow: 0 6px 20px rgba(0, 0, 0, .12); }
 .cover-hint { color: var(--accent); font-size: 14px; font-weight: 600; }
+
+/* 右下の追加ボタン */
+.fab {
+  position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px); z-index: 20;
+  width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: var(--accent-text);
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+}
+.fab:active { transform: scale(.94); }
+.fab-space { margin-bottom: 72px; }
