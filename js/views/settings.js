@@ -83,7 +83,7 @@ export function renderSettings(root) {
       navRow('download', t('settings.export'), null, exportBackup),
       navRow('upload', t('settings.import'), null, importBackup)),
     h('p', { class: 'muted small pad' }, t('settings.storageNote')),
-    h('p', { class: 'muted small center' }, 'カラロク v1.0'));
+    h('p', { class: 'muted small center' }, `カラロク v${self.APP_VERSION ?? ''}`));
 }
 
 // ---- リストの管理 ----

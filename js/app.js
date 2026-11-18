@@ -4,6 +4,7 @@ import { h, icon, refreshSheets, closeAllSheets } from './ui.js';
 import { renderMylists } from './views/mylists.js';
 import { renderSongs } from './views/songs.js';
 import { renderSettings } from './views/settings.js';
+import { startUpdateCheck } from './update.js';
 
 const TABS = [
   { id: 'mylists', icon: 'list', render: renderMylists },
@@ -65,6 +66,7 @@ store.subscribe(() => {
 render();
 
 navigator.storage?.persist?.().catch(() => {});
+startUpdateCheck();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

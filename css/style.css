@@ -336,3 +336,14 @@ textarea.input { resize: vertical; min-height: 80px; }
 }
 .fab:active { transform: scale(.94); }
 .fab-space { margin-bottom: 72px; }
+
+/* 更新の知らせ（画面の上） */
+.update-bar {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 8px); transform: translateX(-50%); z-index: 45;
+  width: min(calc(100% - 32px), 608px); display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-radius: var(--radius); background: var(--accent); color: var(--accent-text);
+  font-weight: 600; font-size: 14px; text-align: left; box-shadow: var(--shadow);
+}
+.update-bar .icon { flex: none; }
+.update-bar.busy { opacity: .7; }
+.update-go { flex: none; padding: 4px 12px; border-radius: 999px; background: var(--accent-text); color: var(--accent); font-size: 13px; }
